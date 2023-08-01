@@ -338,6 +338,41 @@ class OPENAIRobot(AbstractRobot):
             )
             return "抱歉，OpenAI 回答失败"
 
+# class SparkRobot(AbstractRobot):
+#     """
+#     Spark 机器人
+#     """
+
+#     SLUG = "spark"
+
+#     def __init__(self, appid, api_key, api_secret, question):
+#         super(self.__class__, self).__init__()
+#         self.appid = appid
+#         self.api_key = api_key
+#         self.api_secret = api_secret
+#         self.question = question
+    
+#     @classmethod
+#     def get_config(cls):
+#         # Try to get spark config from config
+#         return config.get("spark", {})
+
+#     def chat(self, texts, parsed):
+#         """
+#         使用Spark机器人聊天
+
+#         Arguments:
+#         texts -- user input, typically speech, to be parsed by a module
+#         """
+#         msg = "".join(texts)
+#         msg = utils.stripPunctuation(msg)
+#         try:
+#             self.spark.messages.create(toPersonEmail=self.api_key, text=msg)
+#             return ""
+#         except Exception:
+#             logger.critical("spark robot failed to response for %r", msg, exc_info=True)
+#             return "抱歉，Spark 机器人回答失败"
+        
 
 def get_unknown_response():
     """

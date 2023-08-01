@@ -75,7 +75,7 @@ class SoxPlayer(AbstractPlayer):
         super(SoxPlayer, self).__init__(**kwargs)
         self.playing = False
         self.proc = None
-        self.delete = False
+        self.delete = True # False
         self.onCompleteds = []
         # 创建一个锁用于保证同一时间只有一个音频在播放
         self.play_lock = threading.Lock()
@@ -97,6 +97,7 @@ class SoxPlayer(AbstractPlayer):
         while True:
             (src, onCompleted) = self.play_queue.get()
             if src:
+                self.playing = True
                 with self.play_lock:
                     logger.info(f"开始播放音频：{src}")
                     self.src = src
@@ -119,6 +120,7 @@ class SoxPlayer(AbstractPlayer):
         )
         self.playing = True
         self.proc.wait()
+        print("done playing!!!!!" + src)
         self.playing = False
         if self.delete:
             utils.check_and_delete(src)
@@ -127,7 +129,10 @@ class SoxPlayer(AbstractPlayer):
 
     def play(self, src, delete=False, onCompleted=None):
         if src and (os.path.exists(src) or src.startswith("http")):
-            self.delete = delete
+            if 'static' in src:
+                self.delete = False
+            else:
+                self.delete = True
             self.play_queue.put((src, onCompleted))
         else:
             logger.critical(f"path not exists: {src}", stack_info=True)

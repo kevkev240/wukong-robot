@@ -15,9 +15,9 @@ PLUGIN_PATH = os.path.join(APP_PATH, "plugins")
 DEFAULT_CONFIG_NAME = "default.yml"
 CUSTOM_CONFIG_NAME = "config.yml"
 
-CONFIG_PATH = os.path.expanduser(os.getenv("WUKONG_CONFIG", "~/.wukong"))
-CONTRIB_PATH = os.path.expanduser(os.getenv("WUKONG_CONFIG", "~/.wukong/contrib"))
-CUSTOM_PATH = os.path.expanduser(os.getenv("WUKONG_CONFIG", "~/.wukong/custom"))
+CONFIG_PATH = os.path.expanduser(os.getenv("WUKONG_CONFIG", "../.wukong"))
+CONTRIB_PATH = os.path.expanduser(os.getenv("WUKONG_CONFIG", "../.wukong/contrib"))
+CUSTOM_PATH = os.path.expanduser(os.getenv("WUKONG_CONFIG", "../.wukong/custom"))
 
 
 def getConfigPath():

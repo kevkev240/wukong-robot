@@ -101,7 +101,7 @@ class ActiveListener(object):
     def listen(
         self,
         interrupt_check=lambda: False,
-        sleep_time=0.03,
+        sleep_time=0.03, # 0.03
         silent_count_threshold=15,
         recording_timeout=100,
     ):

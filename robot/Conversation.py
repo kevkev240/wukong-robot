@@ -107,8 +107,8 @@ class Conversation(object):
     def interrupt(self):
         if self.player and self.player.is_playing():
             self.player.stop()
-        if self.immersiveMode:
-            self.brain.pause()
+        # if self.immersiveMode:
+            # self.brain.pause()
 
     def reInit(self):
         """重新初始化"""
@@ -118,8 +118,8 @@ class Conversation(object):
             self.tts = TTS.get_engine_by_slug(config.get("tts_engine", "baidu-tts"))
             self.nlu = NLU.get_engine_by_slug(config.get("nlu_engine", "unit"))
             self.player = Player.SoxPlayer()
-            self.brain = Brain(self)
-            self.brain.printPlugins()
+            # self.brain = Brain(self)
+            # self.brain.printPlugins()
         except Exception as e:
             logger.critical(f"对话初始化失败：{e}", stack_info=True)
 
@@ -127,7 +127,7 @@ class Conversation(object):
         if self.immersiveMode:
             logger.info("处于沉浸模式，恢复技能")
             self.lifeCycleHandler.onRestore()
-            self.brain.restore()
+            # self.brain.restore()
 
     def _InGossip(self, query):
         return self.immersiveMode in ["Gossip"] and not "闲聊" in query
@@ -155,32 +155,32 @@ class Conversation(object):
             self.pardon()
             return
 
-        lastImmersiveMode = self.immersiveMode
+        # lastImmersiveMode = self.immersiveMode
 
         parsed = self.doParse(query)
-        if self._InGossip(query) or not self.brain.query(query, parsed):
-            # 进入闲聊
-            if self.nlu.hasIntent(parsed, "PAUSE") or "闭嘴" in query:
-                # 停止说话
-                self.player.stop()
-            else:
-                # 没命中技能，使用机器人回复
-                if self.ai.SLUG == "openai":
-                    stream = self.ai.stream_chat(query)
-                    self.stream_say(stream, True, onCompleted=self.checkRestore)
-                else:
-                    msg = self.ai.chat(query, parsed)
-                    self.say(msg, True, onCompleted=self.checkRestore)
+        # if self._InGossip(query) or not self.brain.query(query, parsed):
+        #     # 进入闲聊
+        #     if self.nlu.hasIntent(parsed, "PAUSE") or "闭嘴" in query:
+        #         # 停止说话
+        #         self.player.stop()
+        #     else:
+        #         # 没命中技能，使用机器人回复
+        if self.ai.SLUG == "openai":
+            stream = self.ai.stream_chat(query)
+            self.stream_say(stream, True, onCompleted=self.checkRestore)
         else:
-            # 命中技能
-            if lastImmersiveMode and lastImmersiveMode != self.matchPlugin:
-                if self.player:
-                    if self.player.is_playing():
-                        logger.debug("等说完再checkRestore")
-                        self.player.appendOnCompleted(lambda: self.checkRestore())
-                else:
-                    logger.debug("checkRestore")
-                    self.checkRestore()
+            msg = self.ai.chat(query, parsed)
+            self.say(msg, False, onCompleted=self.checkRestore)
+        # else:
+        #     # 命中技能
+        #     if lastImmersiveMode and lastImmersiveMode != self.matchPlugin:
+        #         if self.player:
+        #             if self.player.is_playing():
+        #                 logger.debug("等说完再checkRestore")
+        #                 self.player.appendOnCompleted(lambda: self.checkRestore())
+        #         else:
+        #             logger.debug("checkRestore")
+        #             self.checkRestore()
 
     def doParse(self, query):
         args = {
@@ -269,10 +269,10 @@ class Conversation(object):
 
     def pardon(self):
         if not self.hasPardon:
-            self.say("抱歉，刚刚没听清，能再说一遍吗？", cache=True)
+            self.say("抱歉，能再说一遍吗？", False, onCompleted=self.checkRestore)
             self.hasPardon = True
         else:
-            self.say("没听清呢")
+            self.say("没听清呢", False, onCompleted=self.checkRestore)
             self.hasPardon = False
 
     def _tts_line(self, line, cache, index=0, onCompleted=None):
@@ -404,39 +404,77 @@ class Conversation(object):
         logger.debug(f"tts_count: {self.tts_count}")
         audios = self._tts(lines, cache, onCompleted)
         self._after_play(msg, audios, plugin)
+        
 
+    # def activeListen(self, silent=False):
+    #     """
+    #     主动问一个问题(适用于多轮对话)
+    #     :param silent: 是否不触发唤醒表现（主要用于极客模式）
+    #     :param
+    #     """
+    #     if self.immersiveMode:
+    #         self.player.stop()
+    #     elif self.player.is_playing():
+    #         self.player.join()  # 确保所有音频都播完
+    #     logger.info("进入主动聆听...")
+    #     try:
+    #         if not silent:
+    #             self.lifeCycleHandler.onWakeup()
+    #         listener = snowboydecoder.ActiveListener(
+    #             [constants.getHotwordModel(config.get("hotword", "wukong.pmdl"))]
+    #         )
+    #         voice = listener.listen(
+    #             silent_count_threshold=config.get("silent_threshold", 15),
+    #             recording_timeout=config.get("recording_timeout", 5) * 4,
+    #         )
+    #         if not silent:
+    #             self.lifeCycleHandler.onThink()
+    #         if voice:
+    #             query = self.asr.transcribe(voice)
+    #             utils.check_and_delete(voice)
+    #             return query
+    #         return ""
+    #     except Exception as e:
+    #         logger.error(f"主动聆听失败：{e}", stack_info=True)
+    #         traceback.print_exc()
+    #         return ""
+    
     def activeListen(self, silent=False):
         """
         主动问一个问题(适用于多轮对话)
         :param silent: 是否不触发唤醒表现（主要用于极客模式）
         :param
         """
-        if self.immersiveMode:
-            self.player.stop()
-        elif self.player.is_playing():
-            self.player.join()  # 确保所有音频都播完
-        logger.info("进入主动聆听...")
-        try:
-            if not silent:
-                self.lifeCycleHandler.onWakeup()
-            listener = snowboydecoder.ActiveListener(
-                [constants.getHotwordModel(config.get("hotword", "wukong.pmdl"))]
-            )
-            voice = listener.listen(
-                silent_count_threshold=config.get("silent_threshold", 15),
-                recording_timeout=config.get("recording_timeout", 5) * 4,
-            )
-            if not silent:
-                self.lifeCycleHandler.onThink()
-            if voice:
-                query = self.asr.transcribe(voice)
+        while True:
+            if self.player.is_playing():
+                self.player.join()  # 确保所有音频都播完
+            time.sleep(1)
+            logger.info("进入主动聆听...")
+            try:
+                if not silent:
+                    self.lifeCycleHandler.onWakeup()
+                listener = snowboydecoder.ActiveListener(
+                    [constants.getHotwordModel(config.get("hotword", "wukong.pmdl"))]
+                )
+                print("开始录音")
+                voice = listener.listen(
+                    silent_count_threshold=config.get("silent_threshold", 15),
+                    recording_timeout=config.get("recording_timeout", 5) * 4,
+                )
+                logger.info("结束录音")
+                if not silent:
+                    self.lifeCycleHandler.onThink()
+                self.doConverse(voice)
                 utils.check_and_delete(voice)
-                return query
-            return ""
-        except Exception as e:
-            logger.error(f"主动聆听失败：{e}", stack_info=True)
-            traceback.print_exc()
-            return ""
+                # return ""
+            except Exception as e:
+                logger.error(f"主动聆听失败：{e}", stack_info=True)
+                traceback.print_exc()
+                return ""
+            
+            # pausing the loop
+            # user_input = input()
+            
 
     def play(self, src, delete=False, onCompleted=None, volume=1):
         """播放一个音频"""
