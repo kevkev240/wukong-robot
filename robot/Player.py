@@ -120,7 +120,6 @@ class SoxPlayer(AbstractPlayer):
         )
         self.playing = True
         self.proc.wait()
-        print("done playing!!!!!" + src)
         self.playing = False
         if self.delete:
             utils.check_and_delete(src)

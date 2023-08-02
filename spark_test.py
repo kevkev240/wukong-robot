@@ -1,0 +1,26 @@
+from robot import AI
+from robot.sdk import SparkApi as spark
+
+if __name__ == "__main__":
+
+    # # spark API test
+    # wsParam = spark.Ws_Param("dad131b6", 
+    #                    "3032cc49eafc8b92d8e70cb0e8c8b626", 
+    #                    "OWZkMDJmNWEzZmYyYTk0NjdhMDJmZWFk", 
+    #                    "ws://spark-api.xf-yun.com/v1.1/chat")
+    # # messages = [{"role": "user", "content": "说你好"}]
+    # messages = [{"role": "user", "content": "你好我叫秦睦然，我喜欢猫"},
+    #             {"role": "assistant", "content": "你好秦睦然，我叫悟空"},
+    #             {"role": "user", "content": "你刚才说了什么"}]
+    # res = spark.getMessage(wsParam, messages)
+    # print(res)
+    
+    # spark AI instance test
+    spark = AI.get_robot_by_slug("spark")
+    while True:
+        try:
+            q = input("用户：").rstrip()
+            res = spark.chat(q)
+            print(res)
+        except EOFError:
+            break

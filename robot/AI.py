@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from collections import deque
 import os
 import json
 import random
@@ -8,6 +9,7 @@ from uuid import getnode as get_mac
 from abc import ABCMeta, abstractmethod
 from robot import logging, config, utils
 from robot.sdk import unit
+from robot.sdk import SparkApi as spark
 
 logger = logging.getLogger(__name__)
 
@@ -338,40 +340,59 @@ class OPENAIRobot(AbstractRobot):
             )
             return "抱歉，OpenAI 回答失败"
 
-# class SparkRobot(AbstractRobot):
-#     """
-#     Spark 机器人
-#     """
+class SparkRobot(AbstractRobot):
+    """
+    Spark 机器人
+    """
 
-#     SLUG = "spark"
+    SLUG = "spark"
 
-#     def __init__(self, appid, api_key, api_secret, question):
-#         super(self.__class__, self).__init__()
-#         self.appid = appid
-#         self.api_key = api_key
-#         self.api_secret = api_secret
-#         self.question = question
-    
-#     @classmethod
-#     def get_config(cls):
-#         # Try to get spark config from config
-#         return config.get("spark", {})
+    def __init__(self, appid, api_key, api_secret, max_round=2, prompt=None):
+        super(self.__class__, self).__init__()
+        self.appid = appid
+        self.api_key = api_key
+        self.api_secret = api_secret
+        self.gpt_url = "ws://spark-api.xf-yun.com/v1.1/chat"
+        self.wsParam = spark.Ws_Param(
+            self.appid, 
+            self.api_key, 
+            self.api_secret,
+            self.gpt_url
+        )
+        self.max_hist = max_round * 2 # maximum number of messages to keep in the history
+        self.context = []
+        # Similar to initial system message in openAI GPT,
+        # but spark only has two roles.
+        if prompt:
+            self.context.append({"role": "user", "content": prompt})
+        
+    @classmethod
+    def get_config(cls):
+        # Try to get spark config from config
+        return config.get("spark", {})
 
-#     def chat(self, texts, parsed):
-#         """
-#         使用Spark机器人聊天
+    def chat(self, texts, parsed=None):
+        """
+        使用Spark机器人聊天
 
-#         Arguments:
-#         texts -- user input, typically speech, to be parsed by a module
-#         """
-#         msg = "".join(texts)
-#         msg = utils.stripPunctuation(msg)
-#         try:
-#             self.spark.messages.create(toPersonEmail=self.api_key, text=msg)
-#             return ""
-#         except Exception:
-#             logger.critical("spark robot failed to response for %r", msg, exc_info=True)
-#             return "抱歉，Spark 机器人回答失败"
+        Arguments:
+        texts -- user input, typically speech, to be parsed by a module
+        """
+        msg = "".join(texts)
+        msg = utils.stripPunctuation(msg)
+
+        try:
+            while len(self.context) > self.max_hist:
+                self.context.pop(0)
+            new_message = {"role": "user", "content": msg}
+            self.context.append(new_message)
+            print(self.context)
+            result = spark.getMessage(self.wsParam, self.context)
+            self.context.append({"role": "assistant", "content": result})
+            return result
+        except Exception:
+            logger.critical("spark robot failed to response for %r", msg, exc_info=True)
+            return "抱歉，Spark 机器人回答失败"
         
 
 def get_unknown_response():

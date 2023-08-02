@@ -473,7 +473,7 @@ class Conversation(object):
                 return ""
             
             # pausing the loop
-            # user_input = input()
+            user_input = input()
             
 
     def play(self, src, delete=False, onCompleted=None, volume=1):

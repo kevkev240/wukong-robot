@@ -1,3 +1,7 @@
+"""
+Original template downloaded from:
+https://www.xfyun.cn/doc/spark/Web.html#_1-%E6%8E%A5%E5%8F%A3%E8%AF%B4%E6%98%8E
+"""
 import _thread as thread
 import base64
 import datetime
@@ -12,6 +16,10 @@ from urllib.parse import urlencode
 from wsgiref.handlers import format_date_time
 
 import websocket
+
+from robot import logging
+
+logger = logging.getLogger(__name__)
 
 class Ws_Param(object):
     # 初始化
@@ -54,16 +62,16 @@ class Ws_Param(object):
         url = self.gpt_url + '?' + urlencode(v)
         # 此处打印出建立连接时候的url,参考本demo的时候可取消上方打印的注释，比对相同参数时生成的url与自己代码生成的url是否一致
         return url
-
-
+        
 # 收到websocket错误的处理
 def on_error(ws, error):
     print("### error:", error)
 
 
 # 收到websocket关闭的处理
-def on_close(ws):
-    print("### closed ###")
+def on_close(ws, *args):
+    logger.info('Websocket closed')
+    # print("### closed ###")
 
 
 # 收到websocket连接建立的处理
@@ -78,7 +86,7 @@ def run(ws, *args):
 
 # 收到websocket消息的处理
 def on_message(ws, message):
-    print(message)
+    # print(message)
     data = json.loads(message)
     code = data['header']['code']
     if code != 0:
@@ -88,11 +96,10 @@ def on_message(ws, message):
         choices = data["payload"]["choices"]
         status = choices["status"]
         content = choices["text"][0]["content"]
-        print(content, end='')
+        ws.response_messages.append(content)
         if status == 2:
             ws.close()
-
-
+            
 def gen_params(appid, question):
     """
     通过appid和用户的提问来生成请参数
@@ -112,35 +119,19 @@ def gen_params(appid, question):
         },
         "payload": {
             "message": {
-                "text": [
-                    {"role": "user", "content": question}
-                ]
+                "text": question
             }
         }
     }
     return data
 
-
-def main(appid, api_key, api_secret, gpt_url, question):
-    wsParam = Ws_Param(appid, api_key, api_secret, gpt_url)
+# function to get the responses given an array of history messages
+def getMessage(wsParam, messages):
     websocket.enableTrace(False)
     wsUrl = wsParam.create_url()
     ws = websocket.WebSocketApp(wsUrl, on_message=on_message, on_error=on_error, on_close=on_close, on_open=on_open)
-    ws.appid = appid
-    ws.question = question
-    ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
-
-
-
-"""
-    1、配置好python、pip的环境变量
-    2、执行 pip install websocket 与 pip3 install websocket-client
-    3、去控制台https://console.xfyun.cn/services/cbm获取appid等信息填写即可
-"""
-if __name__ == "__main__":
-    # 测试时候在此处正确填写相关信息即可运行
-    main(appid="",
-         api_secret="",
-         api_key="",
-         gpt_url="ws://spark-api.xf-yun.com/v1.1/chat",
-         question="你是谁？你能做什么")
+    ws.appid = wsParam.APPID
+    ws.question = messages
+    ws.response_messages = []
+    ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE}) # SSL CERT_NONE is a security issue.
+    return ''.join(ws.response_messages)
