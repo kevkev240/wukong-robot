@@ -352,7 +352,7 @@ class SparkRobot(AbstractRobot):
         self.appid = appid
         self.api_key = api_key
         self.api_secret = api_secret
-        self.gpt_url = "ws://spark-api.xf-yun.com/v1.1/chat"
+        self.gpt_url = "wss://spark-api.xf-yun.com/v1.1/chat"
         self.wsParam = spark.Ws_Param(
             self.appid, 
             self.api_key, 
@@ -361,10 +361,6 @@ class SparkRobot(AbstractRobot):
         )
         self.max_hist = max_round * 2 # maximum number of messages to keep in the history
         self.context = []
-        # Similar to initial system message in openAI GPT,
-        # but spark only has two roles.
-        if prompt:
-            self.context.append({"role": "user", "content": prompt})
         
     @classmethod
     def get_config(cls):

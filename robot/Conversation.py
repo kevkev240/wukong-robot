@@ -35,8 +35,10 @@ logger = logging.getLogger(__name__)
 
 
 class Conversation(object):
-    def __init__(self, profiling=False):
+    def __init__(self, init_prompt, profiling=False):
         self.brain, self.asr, self.ai, self.tts, self.nlu = None, None, None, None, None
+        # first prompt (assisstant message)
+        self.init_prompt = init_prompt
         self.reInit()
         self.scheduler = Scheduler(self)
         # 历史会话消息
@@ -55,6 +57,10 @@ class Conversation(object):
         self.tts_index = 0
         self.tts_lock = threading.Lock()
         self.play_lock = threading.Lock()
+        # terminate if user is silent for a long time
+        self.tolerance = 1
+        self.pardon_cnt = 0
+        self.terminate = False
 
     def _lastCompleted(self, index, onCompleted):
         # logger.debug(f"{index}, {self.tts_index}, {self.tts_count}")
@@ -115,6 +121,10 @@ class Conversation(object):
         try:
             self.asr = ASR.get_engine_by_slug(config.get("asr_engine", "tencent-asr"))
             self.ai = AI.get_robot_by_slug(config.get("robot", "tuling"))
+            # Similar to initial system message in openAI GPT,
+            # but spark only has two roles.
+            # NOT WORKING
+            self.ai.context.append({"role": "assisstant", "content": self.init_prompt})
             self.tts = TTS.get_engine_by_slug(config.get("tts_engine", "baidu-tts"))
             self.nlu = NLU.get_engine_by_slug(config.get("nlu_engine", "unit"))
             self.player = Player.SoxPlayer()
@@ -153,6 +163,7 @@ class Conversation(object):
 
         if query.strip() == "":
             self.pardon()
+            self.pardon_cnt += 1
             return
 
         # lastImmersiveMode = self.immersiveMode
@@ -221,6 +232,9 @@ class Conversation(object):
         self.interrupt()
         try:
             query = self.asr.transcribe(fp)
+            if "拜拜" in query or "再见" in query:
+                self.terminate = True
+                return
         except Exception as e:
             logger.critical(f"ASR识别失败：{e}", stack_info=True)
             traceback.print_exc()
@@ -272,7 +286,7 @@ class Conversation(object):
             self.say("抱歉，能再说一遍吗？", False, onCompleted=self.checkRestore)
             self.hasPardon = True
         else:
-            self.say("没听清呢", False, onCompleted=self.checkRestore)
+            self.say("不好意思，我没有听清呢。", False, onCompleted=self.checkRestore)
             self.hasPardon = False
 
     def _tts_line(self, line, cache, index=0, onCompleted=None):
@@ -445,10 +459,11 @@ class Conversation(object):
         :param silent: 是否不触发唤醒表现（主要用于极客模式）
         :param
         """
-        while True:
-            if self.player.is_playing():
-                self.player.join()  # 确保所有音频都播完
+        if self.player.is_playing():
+            self.player.join()  # 确保所有音频都播完
             time.sleep(1)
+            
+        while True:
             logger.info("进入主动聆听...")
             try:
                 if not silent:
@@ -466,14 +481,23 @@ class Conversation(object):
                     self.lifeCycleHandler.onThink()
                 self.doConverse(voice)
                 utils.check_and_delete(voice)
+                if self.player.is_playing():
+                    self.player.join()  # 确保所有音频都播完
+                time.sleep(1)
+                if self.pardon_cnt > self.tolerance or self.terminate:
+                    self.say("再见！如有任何疑问，可以随时拨打：幺八三，三六九，幺二三四五。", False)
+                    time.sleep(10)
+                    break
                 # return ""
             except Exception as e:
                 logger.error(f"主动聆听失败：{e}", stack_info=True)
                 traceback.print_exc()
                 return ""
             
-            # pausing the loop
-            user_input = input()
+            # # pausing the loop
+            # user_input = input().strip()
+            # if user_input == 'q':
+            #     break
             
 
     def play(self, src, delete=False, onCompleted=None, volume=1):

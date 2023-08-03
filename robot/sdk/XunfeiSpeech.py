@@ -41,6 +41,8 @@ class ASR_Ws_Param(object):
         self.CommonArgs = {"app_id": self.APPID}
         # 业务参数(business)，更多个性化参数可在官网查看
         self.BusinessArgs = {"domain": "iat", "language": "zh_cn", "accent": "mandarin"}
+        # 贵州话识别
+        # self.BusinessArgs = {"domain": "iat", "language": "zh_cn", "accent": "guizhounese"}
 
     # 生成url
     def create_url(self):
@@ -156,10 +158,10 @@ def asr_on_message(ws, message):
                 for w in i["cw"]:
                     result += w["w"]
             gResult = gResult + result
-            logger.info(
-                "sid:%s call success!,data is:%s"
-                % (sid, json.dumps(data, ensure_ascii=False))
-            )
+            # logger.info(
+            #     "sid:%s call success!,data is:%s"
+            #     % (sid, json.dumps(data, ensure_ascii=False))
+            # )
     except Exception as e:
         logger.critical(f"xunfei-asr 识别出错了：{e}", stack_info=True)
 
