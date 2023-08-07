@@ -90,5 +90,10 @@ sftp-config.json
 __pycache__
 
 # venv
-wukong/
+venv/
 .env
+
+# local files
+openai_usage.txt
+sample_training_data.txt
+sample_convo.txt

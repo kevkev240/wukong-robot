@@ -30,7 +30,7 @@ class Assisstant(object):
         
     def run(self):
         signal.signal(signal.SIGINT, self._signal_handler)
-        # server.run(self.conversation, self, debug=False)
+        server.run(self.conversation, self, debug=False)
         logger.info("Assisstant Running...", stack_info=False)
         self.conversation.activeListen(silent=False)
         # send a sigquit signal to the main thread
