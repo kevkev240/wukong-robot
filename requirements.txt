@@ -20,3 +20,5 @@ apscheduler
 asyncio
 edge-tts
 nest_asyncio
+langchain==0.0.137
+pinecone-client==2.2.1

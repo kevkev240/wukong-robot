@@ -97,3 +97,5 @@ venv/
 openai_usage.txt
 sample_training_data.txt
 sample_convo.txt
+knowledge_test.txt
+knowledge.txt
